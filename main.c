@@ -1,8 +1,22 @@
+/*
+    This program is a simulator for the LC-3 (Little Computer 3) architecture. 
+    It is used to simulate the way computer hardware execute the LC-3 assembly code.
+    The program will be run to execute a program file written in LC-3 assembly language.
+
+    The small memory size of LC-3 is specified, along with the registers which are 
+    used to store data and addresses in the memory during the execution of the program. 
+    The registers include PC (program counter) which point toward the next instruction 
+    to for the CPU to execute. The opcodes and their instructions are also provided 
+    for the CPU to execute the commands.
+
+    The program is written in C language.
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 
 // Create an array to store memory addresses
-#define MEMORY_MAX (1 << 16) // use 16 bits to store the memory address => MEMORY_MAX = 2^16 = 65536
+#define MEMORY_MAX (1 << 16) // using bitwise operation to define macro MEMORY_MAX = 2^16 = 65536
 uint16_t memory[MEMORY_MAX];
 
 /*
@@ -23,16 +37,16 @@ enum
     R_R7,
     R_PC, // program counter: memory address of the next instruction to be executed
     R_COND, // condition flag: information about the previous operation
-    R_COUNT
+    R_COUNT // number of registers
 };
-uint16_t reg[R_COUNT];
+uint16_t reg[R_COUNT]; // create an array to store the values of the registers
 
 // Create an enum to store the set of 3 condition flags which indicate the sign of the previous calculation
 enum
 {
-    FL_POS = 1 << 0, /* P */
-    FL_ZRO = 1 << 1, /* Z */
-    FL_NEG = 1 << 2, /* N */
+    FL_POS = 1 << 0, // the result of the previous calculation is positive
+    FL_ZRO = 1 << 1, // the result of the previous calculation is zero
+    FL_NEG = 1 << 2, // the result of the previous calculation is negative
 };
 
 // Create an enum to store the set of operations that the CPU can perform (opcodes)
@@ -55,6 +69,58 @@ enum
     OP_LEA, /* load effective address */
     OP_TRAP /* execute trap */
 };
+
+uint16_t swap16(uint16_t x) {
+    /*
+        The LC-3 is a little-endian architecture, but most modern computers are big-endian.
+        In little-endian, the first byte is the least significant digit, and in big-endian, it is reversed.
+        In order to swap a value from big-endian to little-endian, we need to reverse the order of the bytes.
+
+        This function swaps the bytes of a 16-bit value to convert between big-endian and little-endian.
+    */
+
+    return (x << 8) | (x >> 8); // shift the first byte to the right by 8 bits and the second byte to the left by 8 bits
+}
+
+void read_image_file(FILE* file) {
+    /*
+        The assembly program is translated into a binary file called image file which is then loaded into a specific location in the memory.
+        This function reads a 16-bit image file into memory at the location specified by the origin field in the file.
+
+        The first two bytes of the file are the origin.
+        The origin specifies the lowest address of the region of memory that is contained in the file.
+        The rest of the file is a sequence of 16-bit big-endian values that make up the instructions and data for the program.
+    */
+
+    // the origin tells us where the image is placed in the memory
+    uint16_t origin;
+    fread(&origin, sizeof(origin), 1, file);
+    origin = swap16(origin); // swap to little endian
+
+    // we know the maximum file size so we only need one fread 
+    uint16_t max_read = MEMORY_MAX - origin;
+    uint16_t* p = memory + origin; // pointer to the memory location of the origin
+    size_t read = fread(p, sizeof(uint16_t), max_read, file);
+
+    // swap to little endian 
+    while (read-- > 0) // check if read is greater than 0 then decrement it
+    {
+        *p = swap16(*p);
+        ++p;
+    }
+}
+
+int read_image(const char* image_path) {
+    /*
+        This function opens the image file and calls read_image_file to read the file.
+    */
+
+    FILE* file = fopen(image_path, "rb");
+    if (!file) { return 0; };
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
 
 int main(int argc, const char* argv[]) {
     /*

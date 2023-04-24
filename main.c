@@ -70,7 +70,8 @@ uint16_t memory[MEMORY_MAX];
 
 /*
     Create an enum to store registers.
-    The registers are used to store data and addresses during the execution of the program. 
+    The registers are used to store temporary data and addresses during the execution of the program. 
+    The registers are stored inside CPU, so that it is faster to query data from registers.
     The CPU uses these data and addresses to perform operations.
     8 registers are used to store data: R0-R7, and 2 registers are used to store addresses: PC and COND.
 */

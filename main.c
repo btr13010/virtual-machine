@@ -84,24 +84,24 @@ enum
 void read_image_file(FILE* file) {
     /*
         The assembly program is translated into a binary file called image file which is then loaded into a specific location in the memory.
-        This function reads a 16-bit image file into memory at the location specified by the origin field in the file.
+        This function reads a 16-bit image file and store it into memory at the location specified by the origin field in the file.
 
         The first two bytes of the file are the origin.
         The origin specifies the lowest address of the region of memory that is contained in the file.
         The rest of the file is a sequence of 16-bit big-endian values that make up the instructions and data for the program.
     */
 
-    // the origin tells us where the image is placed in the memory
+    // the origin at the start of the file tells us where the image is placed in the memory
     uint16_t origin;
-    fread(&origin, sizeof(origin), 1, file);
+    fread(&origin, sizeof(origin), 1, file); // read origin
     origin = swap16(origin); // swap to little endian
 
-    // we know the maximum file size so we only need one fread 
-    uint16_t max_read = MEMORY_MAX - origin;
-    uint16_t* p = memory + origin; // pointer to the memory location of the origin
-    size_t read = fread(p, sizeof(uint16_t), max_read, file);
+    uint16_t max_read = MEMORY_MAX - origin; // maximum number of words we can read in case the file is too big
+    uint16_t* p = memory + origin; // pointer to the memory location of the origin (start of the image file)
+    // read the file into memory, from the pointer p
+    size_t read = fread(p, sizeof(uint16_t), max_read, file); // read is the number of words in the file
 
-    // swap to little endian 
+    // swap all the words to little endian 
     while (read-- > 0) // check if read is greater than 0 then decrement it
     {
         *p = swap16(*p);
@@ -214,17 +214,22 @@ int main(int argc, const char* argv[]) {
         1. Fetch: fetch the instruction from memory at the address of the PC register and increment the PC register
         2. Decode: decode the instruction by looking at the opcode to determine the operation to be performed
         3. Execute: execute the operation using the parameters in the instruction
+
+        Input:
+            argc: the number of elements in the argv string array
+            *argv: an array of strings containing the paths to the image files
     */
 
-    // Handle command line inputs
+    // Preprocess command line inputs
     if (argc < 2) {
         /* show usage string */
         printf("lc3 [image-file1] ...\n");
         exit(2);
     }
-    
+    // read the image files into memory and exit if any of the files fail to load
     for (int j = 1; j < argc; ++j) {
-        if (!read_image(argv[j])) {
+        if (!read_image(argv[j])) 
+        {
             printf("failed to load image: %s\n", argv[j]);
             exit(1);
         }
@@ -234,23 +239,22 @@ int main(int argc, const char* argv[]) {
     signal(SIGINT, handle_interrupt);
     disable_input_buffering();
 
-    /* since exactly one condition flag should be set at any given time, set the Z flag */
+    // Initialize the condition flag to Z
     reg[R_COND] = FL_ZRO;
 
-    /* set the PC to starting position */
-    /* 0x3000 is the default */
+    // Set the PC to the starting position (default 0x3000)
     enum { PC_START = 0x3000 };
     reg[R_PC] = PC_START;
 
     int running = 1;
-    while (running)
-    {
-        /* FETCH */
-        uint16_t instr = mem_read(reg[R_PC]++);
-        uint16_t op = instr >> 12;
+    while (running) {
+        /* Main loop */
 
-        switch (op)
-        {
+        // read the instruction from memory at the address of the PC register and increment the PC register
+        uint16_t instr = mem_read(reg[R_PC]++); 
+        uint16_t op = instr >> 12; // get the opcode
+
+        switch (op) {
             case OP_ADD:
                 {
                     /* destination register (DR) */
@@ -375,7 +379,7 @@ int main(int argc, const char* argv[]) {
                 {
                     uint16_t r0 = (instr >> 9) & 0x7;
                     uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    mem_write(reg[R_PC] + pc_offset, reg[r0]);
+                    mem_write(reg[R_PC] + pc_offset, reg[r0]); 
                 }
                 break;
             case OP_STI:
@@ -456,7 +460,7 @@ int main(int argc, const char* argv[]) {
             case OP_RES:
             case OP_RTI:
             default:
-                abort();
+                abort(); // Unimplemented instruction
                 break;
         }
     }

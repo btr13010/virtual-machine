@@ -2,8 +2,11 @@
 #include <stdint.h>
 # include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <sys/termios.h>
+#include <sys/mman.h>
 
 // Input buffer size
 struct termios original_tio;

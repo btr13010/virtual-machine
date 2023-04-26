@@ -28,7 +28,7 @@
 uint16_t memory[MEMORY_MAX];
 
 /*
-    Create an array reg to store registers' values. 
+    Create an array reg to store register values. 
     The registers are used to store temporary data and addresses during the execution of the program. 
     The registers are stored inside CPU, so that it is faster to query data from registers.
     The CPU uses these data and addresses to perform operations.
@@ -152,6 +152,7 @@ uint16_t mem_read(uint16_t address) {
     return memory[address];
 }
 
+// Create an enum to store the set of trap codes
 enum
 {
     TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */

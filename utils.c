@@ -74,6 +74,10 @@ uint16_t sign_extend(uint16_t x, int bit_count) {
         Sign extension is used to convert a value from a smaller data type to a larger data type while preserving the value's sign.
         For example, if we have a 5-bit value 0b11111, we can sign extend it to 16 bits by adding 11 0s to the left of the value.
         This will give us 0b1111111111111111 which is -1 in decimal.
+
+        Input: 
+            x: the value to be sign extended
+            bit_count: the number of bits in the value
     */
 
     if ((x >> (bit_count - 1)) & 1) {

@@ -18,9 +18,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/time.h>
 #include <sys/types.h>
-#include <sys/termios.h>
 #include <sys/mman.h>
 
 #include "utils.h"
@@ -30,7 +28,7 @@
 uint16_t memory[MEMORY_MAX];
 
 /*
-    Create an enum to store registers.
+    Create an array reg to store registers' values. 
     The registers are used to store temporary data and addresses during the execution of the program. 
     The registers are stored inside CPU, so that it is faster to query data from registers.
     The CPU uses these data and addresses to perform operations.
@@ -50,7 +48,7 @@ enum
     R_COND, // condition flag: information about the previous operation
     R_COUNT // number of registers
 };
-uint16_t reg[R_COUNT]; // create an array to store the values of the registers
+uint16_t reg[R_COUNT]; 
 
 // Create an enum to store the set of 3 condition flags which indicate the sign of the previous calculation
 enum
@@ -60,7 +58,7 @@ enum
     FL_NEG = 1 << 2, // the result of the previous calculation is negative
 };
 
-// Create an enum to store the set of operations that the CPU can perform (opcodes)
+// The set of operations that the CPU can perform (opcodes) 
 enum
 {
     OP_BR = 0, /* branch */
@@ -154,17 +152,6 @@ uint16_t mem_read(uint16_t address) {
     return memory[address];
 }
 
-void handle_interrupt(int signal) {
-    /*
-        This function handles the interrupt signal.
-        When the user presses Ctrl+C, the program will terminate. 
-    */
-
-    restore_input_buffering();
-    printf("\n");
-    exit(-2);
-}
-
 enum
 {
     TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
@@ -252,7 +239,7 @@ int main(int argc, const char* argv[]) {
 
         // read the instruction from memory at the address of the PC register and increment the PC register
         uint16_t instr = mem_read(reg[R_PC]++); 
-        uint16_t op = instr >> 12; // get the opcode
+        uint16_t op = instr >> 12; // get the opcode by shifting the instruction 12 bits to the right (the index of the opcode is 16 bits)
 
         switch (op) {
             case OP_ADD:

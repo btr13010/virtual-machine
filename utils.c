@@ -56,3 +56,14 @@ uint16_t swap16(uint16_t x) {
 
     return (x << 8) | (x >> 8); // shift the first byte to the right by 8 bits and the second byte to the left by 8 bits
 }
+
+void handle_interrupt(int signal) {
+    /*
+        This function handles the interrupt signal.
+        When the user presses Ctrl+C, the program will terminate. 
+    */
+
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
+}

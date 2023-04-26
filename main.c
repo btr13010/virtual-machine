@@ -162,35 +162,16 @@ enum
     TRAP_HALT = 0x25   /* halt the program */
 };
 
-uint16_t sign_extend(uint16_t x, int bit_count) {
-    /*
-        This function sign extends a value to 16 bits.
-        Sign extension is used to convert a value from a smaller data type to a larger data type while preserving the value's sign.
-        For example, if we have a 5-bit value 0b11111, we can sign extend it to 16 bits by adding 11 0s to the left of the value.
-        This will give us 0b1111111111111111 which is -1 in decimal.
-    */
-
-    if ((x >> (bit_count - 1)) & 1) {
-        x |= (0xFFFF << bit_count);
-    }
-    return x;
-}
-
 void update_flags(uint16_t r) {
     /*
         This function updates the condition flags based on the value of the register.
     */
 
-    if (reg[r] == 0)
-    {
+    if (reg[r] == 0) {
         reg[R_COND] = FL_ZRO;
-    }
-    else if (reg[r] >> 15) /* a 1 in the left-most bit indicates negative */
-    {
+    } else if (reg[r] >> 15) { // a 1 in the left-most bit indicates negative
         reg[R_COND] = FL_NEG;
-    }
-    else
-    {
+    } else {
         reg[R_COND] = FL_POS;
     }
 }

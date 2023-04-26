@@ -49,9 +49,9 @@ uint16_t reg[R_COUNT];
 // Create an enum to store the set of 3 condition flags which indicate the sign of the previous calculation
 enum
 {
-    FL_POS = 1 << 0, // the result of the previous calculation is positive
-    FL_ZRO = 1 << 1, // the result of the previous calculation is zero
-    FL_NEG = 1 << 2, // the result of the previous calculation is negative
+    FL_POS = 1 << 0, // P: the result of the previous calculation is positive
+    FL_ZRO = 1 << 1, // Z: he result of the previous calculation is zero
+    FL_NEG = 1 << 2, // N: the result of the previous calculation is negative
 };
 
 // The set of operations that the CPU can perform (opcodes) 
@@ -217,7 +217,7 @@ int main(int argc, const char* argv[]) {
 
         // read the instruction from memory at the address of the PC register and increment the PC register
         uint16_t instr = mem_read(reg[R_PC]++); 
-        uint16_t op = instr >> 12; // get the opcode by shifting the instruction 12 bits to the right (the index of the opcode is 16 bits)
+        uint16_t op = instr >> 12; // the instruction is located at the left-most 4 bits
 
         switch (op) {
             case OP_ADD:

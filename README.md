@@ -8,7 +8,7 @@ Midterm Project ELEC2030
 
 Compile the program:
 ```bash
-gcc main.c utils.c -o main
+make main
 ```
 Run 2048 game:
 ```bash

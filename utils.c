@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdint.h>
 # include <stdlib.h>
+
+/* For Unix */
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
@@ -48,6 +50,34 @@ uint16_t check_key() {
     timeout.tv_usec = 0;
     return select(1, &readfds, NULL, NULL, &timeout) != 0;
 }
+
+/* For Windows */
+// #include <Windows.h>
+// #include <conio.h>
+// HANDLE hStdin = INVALID_HANDLE_VALUE;
+// DWORD fdwMode, fdwOldMode;
+
+// void disable_input_buffering()
+// {
+//     hStdin = GetStdHandle(STD_INPUT_HANDLE);
+//     GetConsoleMode(hStdin, &fdwOldMode); /* save old mode */
+//     fdwMode = fdwOldMode
+//             ^ ENABLE_ECHO_INPUT  /* no input echo */
+//             ^ ENABLE_LINE_INPUT; /* return when one or
+//                                     more characters are available */
+//     SetConsoleMode(hStdin, fdwMode); /* set new mode */
+//     FlushConsoleInputBuffer(hStdin); /* clear buffer */
+// }
+
+// void restore_input_buffering()
+// {
+//     SetConsoleMode(hStdin, fdwOldMode);
+// }
+
+// uint16_t check_key()
+// {
+//     return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
+// }
 
 uint16_t swap16(uint16_t x) {
     /*

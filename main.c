@@ -426,18 +426,20 @@ int main(int argc, const char* argv[]) {
             case OP_STI:
                 {
                     /*
-                        Store indirect:     
+                        Store indirect: Store the value in register SR specified by bits [11:9] to a memory location. The memory location is the sum of value in PC and sign-extended number that
+                        defined by bits [8:0] of the instruction.
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t PCoffset9 = instr & 0b111111111;
 
-                    mem_write(mem_read(reg[R_PC] + PCoffset9), reg[SR]);
+                    mem_write(mem_read(reg[R_PC] + sign_extend(PCoffset9, 9)), reg[SR]);
                 }
                 break;
             case OP_STR:
                 {
                     /*
-                        Store register: 
+                        Store register: Store content of register SR specified by bits [11:9] to a memory location. The memory location is the sum of the content of register BaseR specified by
+                        bits [8:6] and the sign-extending bits [5:0].
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t BaseR = (instr >> 6) & 0b111;

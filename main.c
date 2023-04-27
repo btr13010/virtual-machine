@@ -201,7 +201,7 @@ int main(int argc, const char* argv[]) {
     }
 
     // Setup
-    signal(SIGINT, handle_interrupt);
+    signal(SIGINT, handle_interrupt());
     disable_input_buffering();
 
     // Initialize the condition flag to Z

@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
-# include <stdlib.h>
+#include <stdlib.h>
 
 /* For Unix */
 // #include <unistd.h>
@@ -20,53 +20,10 @@
 //         This function is used to disable the input buffering so that the program can read the input immediately.
 //     */
 
-    tcgetattr(STDIN_FILENO, &original_tio);
-    struct termios new_tio = original_tio;
-    new_tio.c_lflag &= ~ICANON & ~ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
-}
-
-void restore_input_buffering() {
-    /*
-        This function restores the input buffering.
-        This function is used to restore the input buffering after the program has finished reading the input.
-    */
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
-}
-
-uint16_t check_key() {
-    /*
-        This function checks if the user has pressed a key.
-        If the user has pressed a key, the function returns 1, otherwise it returns 0.
-    */
-
-    fd_set readfds;
-    FD_ZERO(&readfds);
-    FD_SET(STDIN_FILENO, &readfds);
-
-    struct timeval timeout;
-    timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
-    return select(1, &readfds, NULL, NULL, &timeout) != 0;
-}
-
-/* For Windows */
-// #include <Windows.h>
-// #include <conio.h>
-// HANDLE hStdin = INVALID_HANDLE_VALUE;
-// DWORD fdwMode, fdwOldMode;
-
-// void disable_input_buffering()
-// {
-//     hStdin = GetStdHandle(STD_INPUT_HANDLE);
-//     GetConsoleMode(hStdin, &fdwOldMode); /* save old mode */
-//     fdwMode = fdwOldMode
-//             ^ ENABLE_ECHO_INPUT  /* no input echo */
-//             ^ ENABLE_LINE_INPUT; /* return when one or
-//                                     more characters are available */
-//     SetConsoleMode(hStdin, fdwMode); /* set new mode */
-//     FlushConsoleInputBuffer(hStdin); /* clear buffer */
+//     tcgetattr(STDIN_FILENO, &original_tio);
+//     struct termios new_tio = original_tio;
+//     new_tio.c_lflag &= ~ICANON & ~ECHO;
+//     tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
 // }
 
 // void restore_input_buffering() {
@@ -95,6 +52,8 @@ uint16_t check_key() {
 // }
 
 /* For Windows */
+/* Uncomment the following functions if you are using Windows */
+
 #include <Windows.h>
 #include <conio.h>
 HANDLE hStdin = INVALID_HANDLE_VALUE;

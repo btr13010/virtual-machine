@@ -372,10 +372,10 @@ int main(int argc, const char* argv[]) {
                         calculated by adding the sign-extended of the rightmost 9 bits to the incremented program counter (PC).
                     */
                     
-                    uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is specified by bits [9:11]
+                    uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is specified by bits [11:9]
                     uint16_t PCoffset9 = instr & 0b111111111;  // PCoffset9 is specified by the rightmost 9 bits.
 
-                    // add the sign-extended value of PCoffset9 to the current PC to calculate the address where the value will be taken, load it to the destination register 
+                    // add the sign-extended value of PCoffset9 to the current PC to calculate the address where the value will be taken, load it to the destination register. 
                     reg[DR] = mem_read(mem_read(reg[R_PC] + sign_extend(PCoffset9, 9)));
                     update_flags(DR);
                 }
@@ -383,13 +383,13 @@ int main(int argc, const char* argv[]) {
             case OP_LDR:
                 {
                     /*
-                        Load Base+offset: Assign value from an address to destination registar which is specified by bits [12:15].
+                        Load Base+offset: Assign value from an address to destination registar which is specified by bits [15:12].
                         The address from which value is taken is calculated by the sum of sign-extended number which is specified
-                        by bits [0:5] and the content stored in a regiser which is specified by bits [6:8] 
+                        by bits [0:5] and the content stored in a regiser which is specified by bits [8:6] 
                     */
 
-                    uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is define by bits [9: 11]. 
-                    uint16_t BaseR = (instr >> 6) & 0b111;  // BaseR is defined by bits [6:8]
+                    uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is define by bits [11:9]. 
+                    uint16_t BaseR = (instr >> 6) & 0b111;  // BaseR is defined by bits [8:6]
                     uint16_t Offset6 = instr & 0b111111;  //  Offset6 is defined by the rightmost 6 bits of the instruciton.
 
                     reg[DR] = mem_read(reg[BaseR] + sign_extend(Offset6, 6));
@@ -400,11 +400,11 @@ int main(int argc, const char* argv[]) {
                 {   
                     /*
                         Load effective address: Load an address to a register. The address that will be loaded is equal to the sum of
-                        the incremented PC and the sign-extended number which is specified by bits [0:8] of the instruction.                
+                        the incremented PC and the sign-extended number which is specified by bits [8:0] of the instruction.                
                     */
 
-                    uint16_t DR = (instr >> 9) & 0b111;  // Destination register is the defined by bits [9:11]
-                    uint16_t PCoffset9 = instr & 0b111111111;  // PCoffset9 is defined by bits [0:8]
+                    uint16_t DR = (instr >> 9) & 0b111;  // Destination register is the defined by bits [11:9]
+                    uint16_t PCoffset9 = instr & 0b111111111;  // PCoffset9 is defined by bits [8:0]
 
                     reg[DR] = reg[R_PC] + sign_extend(PCoffset9, 9);
                     update_flags(DR);
@@ -413,12 +413,12 @@ int main(int argc, const char* argv[]) {
             case OP_ST:
                 {   
                     /*
-                        Store: store content of the register SR defined by bits [9:11] to a memory location.
+                        Store: store content of the register SR defined by bits [11:9] to a memory location.
                         The location is the sum of the incremented PC and the sign-extended number that specified by the last 9 bits (PCoffset9) of the instruction.
                     */
 
-                    uint16_t SR = (instr >> 9) & 0b111;  //SR is defined by bits [9:11]
-                    uint16_t PCoffset9 = instr & 0b111111111;  //PCoffset is specified by bits [0:8]
+                    uint16_t SR = (instr >> 9) & 0b111;  //SR is defined by bits [11:9]
+                    uint16_t PCoffset9 = instr & 0b111111111;  //PCoffset is specified by bits [8:0]
 
                     mem_write(reg[R_PC] + sign_extend(PCoffset9, 9), reg[SR]); 
                 }
@@ -426,7 +426,7 @@ int main(int argc, const char* argv[]) {
             case OP_STI:
                 {
                     /*
-                        Store indirect: 
+                        Store indirect:     
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t PCoffset9 = instr & 0b111111111;
@@ -447,22 +447,36 @@ int main(int argc, const char* argv[]) {
                 }
                 break;
             case OP_TRAP:
-                reg[R_R7] = reg[R_PC];
-                
-                switch (instr & 0xFF)
+                /*
+                    Trap: Store the value of PC in register R_R7, then execute the instruction corresponding to travect8, which specify by the rightmost 8 bits
+                    To display a signle character or string, we use putc() ot output each character to the standard output and then flush the output stream using fflush(stdout).
+                    The reason why we use this method is that putc() and fflush() provide more control and efficiency for simple character output compared to the more feature-rich printf(). 
+                */
+                reg[R_R7] = reg[R_PC]; 
+                uint16_t trapvect8 = instr & 0b11111111; // trapvect8 is specified by the bits [7:0]
+
+                switch (trapvect8)
                 {
                     case TRAP_GETC:
-                        /* read a single ASCII char */
+                        /*
+                            Read a single character from the keyboard. The ASCII code of that character will be stored in register R_R0.
+                        */
                         reg[R_R0] = (uint16_t)getchar();
                         update_flags(R_R0);
                         break;
                     case TRAP_OUT:
+                        /*
+                            Display the character that is currently stored in R_R0.
+                        */
                         putc((char)reg[R_R0], stdout);
                         fflush(stdout);
                         break;
                     case TRAP_PUTS:
                         {
-                            /* one char per word */
+                            /*
+                                Display a string (one by one character) onto the console monitor. The characters of string with be stored in consecutive locations in memory, the location 
+                                of the first character is defined by value in register R_RO. TRAP_PUTS will terminate when it encounter x0000 in memory. 
+                            */
                             uint16_t* c = memory + reg[R_R0];
                             while (*c)
                             {
@@ -473,20 +487,25 @@ int main(int argc, const char* argv[]) {
                         }
                         break;
                     case TRAP_IN:
-                        {
+                        {   
+                            /*
+                               Require user to enter a character from the keyboard. This character will be echoed onto the console display and stored in register R_R0 at the same time.
+                            */
                             printf("Enter a character: ");
                             char c = getchar();
                             putc(c, stdout);
-                            fflush(stdout);
-                            reg[R_R0] = (uint16_t)c;
+                            fflush(stdout);  // echo the entered character onto the console monitor.
+                            reg[R_R0] = (uint16_t)c;  // strore the value in R_R0.
                             update_flags(R_R0);
                         }
                         break;
                     case TRAP_PUTSP:
                         {
-                            /* one char per byte (two bytes per word)
-                               here we need to swap back to
-                               big endian format */
+                            /* 
+                                Write a string onto the console monitor but in this case two characters are stored in each memory location (similarly to TRAP_PUTS, the characters are also 
+                                stored in consecutive memory locations). The character which is specified by the rightmost 8 bits ([7:0]) will be read first and then the character defined
+                                by the bits [15:8] is displayed. TRAP_PUTSP terminates when it encounters x0000 in the memory.
+                            */
                             uint16_t* c = memory + reg[R_R0];
                             while (*c)
                             {
@@ -500,6 +519,9 @@ int main(int argc, const char* argv[]) {
                         }
                         break;
                     case TRAP_HALT:
+                        /* 
+                            Halt the execution and display the message onto console monitor.
+                        */
                         puts("HALT");
                         fflush(stdout);
                         running = 0;

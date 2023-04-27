@@ -323,17 +323,24 @@ int main(int argc, const char* argv[]) {
 
             case OP_JSR:
                 {
-
                     /*
-                    The condition is specified at bit[11].
-                    JSR case: If bit[11] = 0, the adress of the subroutine is obtained
-                        from the base register.
-                    JSRR case: If bit[11] = 1, the adress is computed by sign-extending bits [10:0]
-                        (PC offset is of 11 bits) and adding it to the incremented PC.
+                        The condition at bit[11] specifies 2 cases of the JSR operation.
+
+                        JSRR case: If bit[11] = 0, the address of the subroutine is obtained from the base register.
+                            Example in assembly code:
+                                JSRR R2 ; Store the next PC address to R7, then jump to the address stored in R2.
+
+                        JSR case: If bit[11] = 1, the address is computed by sign-extending bits [10:0]
+                            (PC offset is of 11 bits) and adding it to the incremented PC.
+                            Example in assembly code:
+                                JSR LOOP ; Store the next PC address to R7, then jump to LOOP.
                     */
-                
+
+                    // Get the condition at bit[11]
                     uint16_t conditions_11 = (instr >> 11) & 0b1;
+                    // Store the PC address to R7
                     reg[R_R7] = reg[R_PC];
+
                     if (conditions_11) //JSR
                     {
                         uint16_t PCoffset11 = sign_extend(instr & 0b11111111111, 11);
@@ -349,16 +356,18 @@ int main(int argc, const char* argv[]) {
             
             case OP_LD:
                 {
-                    // desReg: the destination of register
+                    // desReg: the destination of register is the left-most 3 bits after the opcode
+                    // desReg stores the result of the operation
                     uint16_t desReg = (instr >> 9) & 0b111;
-                    //Sign-extend the PC offset of 9 bits
+                    // Sign-extend the PC offset which is stored in the right-most 9 bits
                     uint16_t PCoffset9 = sign_extend(instr & 0b111111111, 9);
 
                     /*
-                    The operator loads the address. The address is calculated by 
-                    sign-extending the bits[8:0], and then adding this value to
-                    the incremented PC.
-                    desReg is loaded with the information from memory located at this address.
+                        The LD operation loads the address which is calculated by sign-extending the bits[8:0], 
+                        and then adding this value to the incremented PC.
+                        desReg is loaded with the information from memory located at this address.
+                            Example in assembly code:
+                                LD R0, LOOP ; R0 <- mem_read(LOOP)
                     */
                     reg[desReg] = mem_read(reg[R_PC] + PCoffset9);
                     update_flags(desReg);
@@ -370,6 +379,8 @@ int main(int argc, const char* argv[]) {
                     /*
                         Load Indirect: load a value from address to a register. The address from which value is extracted can be 
                         calculated by adding the sign-extended of the rightmost 9 bits to the incremented program counter (PC).
+                            Example in assembly code:
+                                LDI R0, LOOP ; R0 <- mem_read(mem_read(LOOP))
                     */
                     
                     uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is specified by bits [11:9]
@@ -383,14 +394,16 @@ int main(int argc, const char* argv[]) {
             case OP_LDR:
                 {
                     /*
-                        Load Base+offset: Assign value from an address to destination registar which is specified by bits [15:12].
+                        Load Base+offset: Assign value from an address to destination register which is specified by bits [11:9].
                         The address from which value is taken is calculated by the sum of sign-extended number which is specified
-                        by bits [0:5] and the content stored in a regiser which is specified by bits [8:6] 
+                        by bits [0:5] and the content stored in a register which is specified by bits [8:6] 
+                            Example in assembly code:
+                                LDR R0, R1, #1 ; R0 <- mem_read(R1 + 1)
                     */
 
                     uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is define by bits [11:9]. 
                     uint16_t BaseR = (instr >> 6) & 0b111;  // BaseR is defined by bits [8:6]
-                    uint16_t Offset6 = instr & 0b111111;  //  Offset6 is defined by the rightmost 6 bits of the instruciton.
+                    uint16_t Offset6 = instr & 0b111111;  //  Offset6 is defined by the rightmost 6 bits of the instruction.
 
                     reg[DR] = mem_read(reg[BaseR] + sign_extend(Offset6, 6));
                     update_flags(DR);
@@ -400,7 +413,9 @@ int main(int argc, const char* argv[]) {
                 {   
                     /*
                         Load effective address: Load an address to a register. The address that will be loaded is equal to the sum of
-                        the incremented PC and the sign-extended number which is specified by bits [8:0] of the instruction.                
+                        the incremented PC and the sign-extended number which is specified by bits [8:0] of the instruction.   
+                            Example in assembly code:
+                                LEA R0, LOOP ; R0 <- address of LOOP             
                     */
 
                     uint16_t DR = (instr >> 9) & 0b111;  // Destination register is the defined by bits [11:9]
@@ -415,6 +430,8 @@ int main(int argc, const char* argv[]) {
                     /*
                         Store: store content of the register SR defined by bits [11:9] to a memory location.
                         The location is the sum of the incremented PC and the sign-extended number that specified by the last 9 bits (PCoffset9) of the instruction.
+                            Example in assembly code:
+                                ST R0, LOOP ; mem_write(LOOP, R0)
                     */
 
                     uint16_t SR = (instr >> 9) & 0b111;  //SR is defined by bits [11:9]
@@ -426,8 +443,9 @@ int main(int argc, const char* argv[]) {
             case OP_STI:
                 {
                     /*
-                        Store indirect: Store the value in register SR specified by bits [11:9] to a memory location. The memory location is the sum of value in PC and sign-extended number that
-                        defined by bits [8:0] of the instruction.
+                        Store indirect: store content of the register SR defined by bits [11:9] to a memory location defined in bits [8:0].  
+                            Example in assembly code:
+                                STI R0, LOOP ; mem_write(mem_read(LOOP), R0)
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t PCoffset9 = instr & 0b111111111;
@@ -438,8 +456,9 @@ int main(int argc, const char* argv[]) {
             case OP_STR:
                 {
                     /*
-                        Store register: Store content of register SR specified by bits [11:9] to a memory location. The memory location is the sum of the content of register BaseR specified by
-                        bits [8:6] and the sign-extending bits [5:0].
+                        Store register: store content of the register SR defined by bits [11:9] to a memory location.
+                            Example in assembly code:
+                                STR R0, R1, #1 ; mem_write(R1 + 1, R0)
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t BaseR = (instr >> 6) & 0b111;

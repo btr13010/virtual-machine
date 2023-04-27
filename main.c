@@ -119,8 +119,8 @@ int read_image(const char* image_path) {
 // Memory mapped registers are used to communicate with the special hardware devices
 enum
 {
-    MR_KBSR = 0xFE00, // keyboard status register indicates if a key has been pressed
-    MR_KBDR = 0xFE02  // keyboard data register indicates which key has been pressed
+    MR_KBSR = 0b1111111000000000, // keyboard status register indicates if a key has been pressed
+    MR_KBDR = 0b1111111000000010  // keyboard data register indicates which key has been pressed
 };
 
 void mem_write(uint16_t address, uint16_t val) {
@@ -151,12 +151,12 @@ uint16_t mem_read(uint16_t address) {
 // Create an enum to store the set of trap codes
 enum
 {
-    TRAP_GETC = 0x20,  /* get character from keyboard, not echoed onto the terminal */
-    TRAP_OUT = 0x21,   /* output a character */
-    TRAP_PUTS = 0x22,  /* output a word string */
-    TRAP_IN = 0x23,    /* get character from keyboard, echoed onto the terminal */
-    TRAP_PUTSP = 0x24, /* output a byte string */
-    TRAP_HALT = 0x25   /* halt the program */
+    TRAP_GETC = 0b100000,  /* get character from keyboard, not echoed onto the terminal */
+    TRAP_OUT = 0b100001,   /* output a character */
+    TRAP_PUTS = 0b100010,  /* output a word string */
+    TRAP_IN = 0b100011,    /* get character from keyboard, echoed onto the terminal */
+    TRAP_PUTSP = 0b100100, /* output a byte string */
+    TRAP_HALT = 0b100101  /* halt the program */
 };
 
 void update_flags(uint16_t r) {
@@ -450,7 +450,7 @@ int main(int argc, const char* argv[]) {
                                 JMP R2 ; Jump to the address stored in R2.
 
                         The base register is identified at bits[8:6].
-                        This also handles RET since RET is a special case of JMP, happens when Base_R is R7.
+                        This also handles RES (Return from subroutine) since RES is a special case of JMP, happens when Base_R is R7.
                     */
                     reg[R_PC] = reg[Base_R];
                 }
@@ -556,8 +556,8 @@ int main(int argc, const char* argv[]) {
                 }
                 break;
             
-            case OP_RTI:
-            case OP_RES:
+            case OP_RTI: //Return from interrupt, which returns the CPU from an interrupt routine to the main program that was interrupted.
+            case OP_RES: //As mentioned above, this is a special case of JMP, and is already handled in JMP.
             default:
                 abort(); // Unimplemented instruction
                 break;

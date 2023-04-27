@@ -115,7 +115,7 @@ uint16_t sign_extend(uint16_t x, int bit_count) {
     */
 
     if ((x >> (bit_count - 1)) & 1) {
-        x |= (0xFFFF << bit_count); // if the most significant bit is 1, we add 1s to the left of the value
+        x |= (0b1111111111111111 << bit_count); // if the most significant bit is 1, we add 1s to the left of the value
     }
     return x;
 }

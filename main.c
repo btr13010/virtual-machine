@@ -217,28 +217,30 @@ int main(int argc, const char* argv[]) {
 
         // read the instruction from memory at the address of the PC register and increment the PC register
         uint16_t instr = mem_read(reg[R_PC]++); 
-        uint16_t op = instr >> 12; // the instruction is specified at the left-most 4 bits
+        uint16_t op = instr >> 12; // the instruction is located at the left-most 4 bits
 
         switch (op) {
             case OP_ADD:
                 {
-                    // desReg: the destination of register is the left-most 3 bits after the opcode
-                    // desReg stores the result of the operation
+                    // desReg: the destination of register
                     uint16_t desReg = (instr >> 9) & 0b111;
-                    // SR1: The first operand (SR1) is the 3 bits after the destination register
+                    // SR1: The first operand (SR1)
                     uint16_t SR1 = (instr >> 6) & 0b111;
-                    // The 5th bit specifies if it is in immediate value mode (bit[5]==1)
-                    // The immediate case is the case when the second operand is a constant instead of a register value
-                    uint16_t imm_mode = (instr >> 5) & 0b1; 
+                    //Check if it is in immediate value mode (bit[5]==1)
+                    uint16_t imm_mode = (instr >> 5) & 0b1;
 
                     /* 
-                        The "ADD" operator adds the two operands whose values are stored in the register using "+".
-                        In immediate mode, the second operand is the sign-extended version of the constant value specified in the instruction.
-                        In register mode, the second operand is the value stored in the register specified in the instruction.
+                    If it is in the immidiate value mode, 
+                        the second source operand is obtained
+                            by sign-extending to 16 bits. 
+                    If it is not in the immidiate value mode,
+                        the second operand is optained 
+                            from SR2. 
+                    This case is an "ADD" operator, so it adds the two operands using "+".
                     */
                     reg[desReg] = reg[SR1] + (imm_mode ? sign_extend(instr & 0b11111, 5) : reg[instr & 0b111]);
+                    
 
-                    // Finally update the condition flags using the result of the operation
                     update_flags(desReg);
 
                 }
@@ -246,19 +248,21 @@ int main(int argc, const char* argv[]) {
        
             case OP_AND:
                 {
-                    // desReg: the destination of register is the left-most 3 bits after the opcode
-                    // desReg stores the result of the operation
+                    // desReg: the destination of register
                     uint16_t desReg = (instr >> 9) & 0b111;
-                    // SR1: The first operand (SR1) is the 3 bits after the destination register
+                    // SR1: The first operand (SR1)
                     uint16_t SR1 = (instr >> 6) & 0b111;
-                    // The 5th bit specifies if it is in immediate value mode (bit[5]==1)
-                    // The immediate case is the case when the second operand is a constant instead of a register value
+                    //Check if it is in immediate value mode (bit[5]==1)
                     uint16_t imm_mode = (instr >> 5) & 0b1;
                 
                     /* 
-                        The "AND" operator uses & to perform bitwise AND on the two operands.
-                        In immediate mode, the second operand is the sign-extended version of the constant value specified in the instruction.
-                        In register mode, the second operand is the value stored in the register specified in the instruction.
+                    If it is in the immidiate value mode, 
+                        the second source operand is obtained
+                            by sign-extending to 16 bits. 
+                    If it is not in the immidiate value mode,
+                        the second operand is optained 
+                            from SR2. 
+                    Similarly, this case is an "AND" operator, so it uses &.
                     */
                     reg[desReg] = reg[SR1] & (imm_mode ? sign_extend(instr & 0b11111, 5) : reg[instr & 0b111]);
 
@@ -268,13 +272,14 @@ int main(int argc, const char* argv[]) {
 
             case OP_NOT:
                 {
-                    // desReg: the destination of register is the left-most 3 bits after the opcode
+                    // desReg: the destination of register
                     uint16_t desReg = (instr >> 9) & 0b111;
-                    // SR1: The first operand (SR1) is the 3 bits after the destination register
+                    // SR1: The first operand (SR1)
                     uint16_t SR1 = (instr >> 6) & 0b111;
 
                     /*
-                        The NOT operation performs ~ (bitwise NOT) in C or C++: takes one number and inverts all bits of it.
+                    The ~ (bitwise NOT) in C or C++
+                    takes one number and inverts all bits of it.
                     */
                     reg[desReg] = ~reg[SR1];
                     
@@ -284,22 +289,18 @@ int main(int argc, const char* argv[]) {
 
             case OP_BR:
                 {   
-                    // Sign-extend the PC offset
-                    // The first 9 bits after the opcode specifies how much to offset the PC
+                    //Sign-extend the PC offset of 9 bits
                     uint16_t PCoffset9 = sign_extend(instr & 0b111111111, 9);
-                    // the condition codes are the 3 bits after the opcode
-                    uint16_t conditions_9 = (instr >> 9) & 0b111; 
-
+                    uint16_t conditions_9 = (instr >> 9) & 0b111;
                     /*
-                        The BR operation is a conditional branch. It check the value of the condition codes along with the current conditional flags,
-                        and branch to the location specified by the PC offset if the condition is true.
-                            Example in assembly code: 
-                                BRzp LOOP ; Branch to LOOP if the last result was zero or positive.
-
-                        The conditions are identified by the state of bits [11:9] (condition codes).
-                        If any of the condition codes tested is set (conditions != 0), increment the PC with the sign-extended PCoffset.
+                    The conditions are identified by the state of bits [11:9].
+                    If any of the condition codes tested is set
+                    (conditions != 0), increase the PC with the
+                    sign-extended PCoffset.
+                    (The branch is taken if the below condition is true)
                     */
-                    if (conditions_9 & reg[R_COND]) {
+                    if (conditions_9 & reg[R_COND])
+                    {
                         reg[R_PC] = reg[R_PC] + PCoffset9;
                     }
                 }
@@ -307,17 +308,16 @@ int main(int argc, const char* argv[]) {
 
             case OP_JMP:
                 {
-                    // Base register is the 3 bits after the opcode
-                    uint16_t Base_R = (instr >> 6) & 0b111;
+                    // SR1: The first operand (SR1)
+                    uint16_t SR1 = (instr >> 6) & 0b111;
                     /* 
-                        The JMP operation makes the program unconditionally jumps to the location specified in the base register.
-                            Example in assembly code:
-                                JMP R2 ; Jump to the address stored in R2.
-
-                        The base register is identified at bits[8:6].
-                        This also handles RET since RET is a special case of JMP, happens when Base_R is R7.
+                    This operator makes the program unconditionally 
+                    jumps to the location specified in the base register.
+                    The base register is identified at bits[8:6].
+                    This also handles RET since RET is a special case of JMP,
+                    happens when SR1 is 7.
                     */
-                    reg[R_PC] = reg[Base_R];
+                    reg[R_PC] = reg[SR1];
                 }
                 break;
 
@@ -426,18 +426,20 @@ int main(int argc, const char* argv[]) {
             case OP_STI:
                 {
                     /*
-                        Store indirect:     
+                        Store indirect: Store the value in register SR specified by bits [11:9] to a memory location. The memory location is the sum of value in PC and sign-extended number that
+                        defined by bits [8:0] of the instruction.
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t PCoffset9 = instr & 0b111111111;
 
-                    mem_write(mem_read(reg[R_PC] + PCoffset9), reg[SR]);
+                    mem_write(mem_read(reg[R_PC] + sign_extend(PCoffset9, 9)), reg[SR]);
                 }
                 break;
             case OP_STR:
                 {
                     /*
-                        Store register: 
+                        Store register: Store content of register SR specified by bits [11:9] to a memory location. The memory location is the sum of the content of register BaseR specified by
+                        bits [8:6] and the sign-extending bits [5:0].
                     */
                     uint16_t SR = (instr >> 9) & 0b111;
                     uint16_t BaseR = (instr >> 6) & 0b111;

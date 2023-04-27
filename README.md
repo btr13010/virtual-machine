@@ -6,6 +6,8 @@ Midterm Project ELEC2030
 
 **How to run**:
 
+There are three functions in the utils.c file that are operating system dependent. You need to refer to this file and uncomment the functions corresponding to your OS before compiling the program.
+
 Compile the program:
 ```bash
 make main

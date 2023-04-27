@@ -222,96 +222,149 @@ int main(int argc, const char* argv[]) {
         switch (op) {
             case OP_ADD:
                 {
-                    /* destination register (DR) */
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    /* first operand (SR1) */
-                    uint16_t r1 = (instr >> 6) & 0x7;
-                    /* whether we are in immediate mode */
-                    uint16_t imm_flag = (instr >> 5) & 0x1;
+                    // desReg: the destination of register
+                    uint16_t desReg = (instr >> 9) & 0b111;
+                    // SR1: The first operand (SR1)
+                    uint16_t SR1 = (instr >> 6) & 0b111;
+                    //Check if it is in immediate value mode (bit[5]==1)
+                    uint16_t imm_mode = (instr >> 5) & 0b1;
 
-                    if (imm_flag)
-                    {
-                        uint16_t imm5 = sign_extend(instr & 0x1F, 5);
-                        reg[r0] = reg[r1] + imm5;
-                    }
-                    else
-                    {
-                        uint16_t r2 = instr & 0x7;
-                        reg[r0] = reg[r1] + reg[r2];
-                    }
+                    /* 
+                    If it is in the immidiate value mode, 
+                        the second source operand is obtained
+                            by sign-extending to 16 bits. 
+                    If it is not in the immidiate value mode,
+                        the second operand is optained 
+                            from SR2. 
+                    This case is an "ADD" operator, so it adds the two operands using "+".
+                    */
+                    reg[desReg] = reg[SR1] + (imm_mode ? sign_extend(instr & 0b11111, 5) : reg[instr & 0b111]);
+                    
 
-                    update_flags(r0);
+                    update_flags(desReg);
+
                 }
                 break;
+       
             case OP_AND:
                 {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t r1 = (instr >> 6) & 0x7;
-                    uint16_t imm_flag = (instr >> 5) & 0x1;
+                    // desReg: the destination of register
+                    uint16_t desReg = (instr >> 9) & 0b111;
+                    // SR1: The first operand (SR1)
+                    uint16_t SR1 = (instr >> 6) & 0b111;
+                    //Check if it is in immediate value mode (bit[5]==1)
+                    uint16_t imm_mode = (instr >> 5) & 0b1;
                 
-                    if (imm_flag)
-                    {
-                        uint16_t imm5 = sign_extend(instr & 0x1F, 5);
-                        reg[r0] = reg[r1] & imm5;
-                    }
-                    else
-                    {
-                        uint16_t r2 = instr & 0x7;
-                        reg[r0] = reg[r1] & reg[r2];
-                    }
-                    update_flags(r0);
+                    /* 
+                    If it is in the immidiate value mode, 
+                        the second source operand is obtained
+                            by sign-extending to 16 bits. 
+                    If it is not in the immidiate value mode,
+                        the second operand is optained 
+                            from SR2. 
+                    Similarly, this case is an "AND" operator, so it uses &.
+                    */
+                    reg[desReg] = reg[SR1] & (imm_mode ? sign_extend(instr & 0b11111, 5) : reg[instr & 0b111]);
+
+                    update_flags(desReg);
                 }
                 break;
+
             case OP_NOT:
                 {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t r1 = (instr >> 6) & 0x7;
-                
-                    reg[r0] = ~reg[r1];
-                    update_flags(r0);
+                    // desReg: the destination of register
+                    uint16_t desReg = (instr >> 9) & 0b111;
+                    // SR1: The first operand (SR1)
+                    uint16_t SR1 = (instr >> 6) & 0b111;
+
+                    /*
+                    The ~ (bitwise NOT) in C or C++
+                    takes one number and inverts all bits of it.
+                    */
+                    reg[desReg] = ~reg[SR1];
+                    
+                    update_flags(desReg);
                 }
                 break;
+
             case OP_BR:
-                {
-                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    uint16_t cond_flag = (instr >> 9) & 0x7;
-                    if (cond_flag & reg[R_COND])
+                {   
+                    //Sign-extend the PC offset of 9 bits
+                    uint16_t PCoffset9 = sign_extend(instr & 0b111111111, 9);
+                    uint16_t conditions_9 = (instr >> 9) & 0b111;
+                    /*
+                    The conditions are identified by the state of bits [11:9].
+                    If any of the condition codes tested is set
+                    (conditions != 0), increase the PC with the
+                    sign-extended PCoffset.
+                    (The branch is taken if the below condition is true)
+                    */
+                    if (conditions_9 & reg[R_COND])
                     {
-                        reg[R_PC] += pc_offset;
+                        reg[R_PC] = reg[R_PC] + PCoffset9;
                     }
                 }
                 break;
+
             case OP_JMP:
                 {
-                    /* Also handles RET */
-                    uint16_t r1 = (instr >> 6) & 0x7;
-                    reg[R_PC] = reg[r1];
+                    // SR1: The first operand (SR1)
+                    uint16_t SR1 = (instr >> 6) & 0b111;
+                    /* 
+                    This operator makes the program unconditionally 
+                    jumps to the location specified in the base register.
+                    The base register is identified at bits[8:6].
+                    This also handles RET since RET is a special case of JMP,
+                    happens when SR1 is 7.
+                    */
+                    reg[R_PC] = reg[SR1];
                 }
                 break;
+
             case OP_JSR:
                 {
-                    uint16_t long_flag = (instr >> 11) & 1;
+
+                    /*
+                    The condition is specified at bit[11].
+                    JSR case: If bit[11] = 0, the adress of the subroutine is obtained
+                        from the base register.
+                    JSRR case: If bit[11] = 1, the adress is computed by sign-extending bits [10:0]
+                        (PC offset is of 11 bits) and adding it to the incremented PC.
+                    */
+                
+                    uint16_t conditions_11 = (instr >> 11) & 0b1;
                     reg[R_R7] = reg[R_PC];
-                    if (long_flag)
+                    if (conditions_11) //JSR
                     {
-                        uint16_t long_pc_offset = sign_extend(instr & 0x7FF, 11);
-                        reg[R_PC] += long_pc_offset;  /* JSR */
+                        uint16_t PCoffset11 = sign_extend(instr & 0b11111111111, 11);
+                        reg[R_PC] = reg[R_PC] + PCoffset11;  
                     }
-                    else
+                    else //JSRR
                     {
-                        uint16_t r1 = (instr >> 6) & 0x7;
-                        reg[R_PC] = reg[r1]; /* JSRR */
+                        uint16_t SR1 = (instr >> 6) & 0b111;
+                        reg[R_PC] = reg[SR1]; //SR1 is the base register
                     }
                 }
                 break;
+            
             case OP_LD:
                 {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    reg[r0] = mem_read(reg[R_PC] + pc_offset);
-                    update_flags(r0);
+                    // desReg: the destination of register
+                    uint16_t desReg = (instr >> 9) & 0b111;
+                    //Sign-extend the PC offset of 9 bits
+                    uint16_t PCoffset9 = sign_extend(instr & 0b111111111, 9);
+
+                    /*
+                    The operator loads the address. The address is calculated by 
+                    sign-extending the bits[8:0], and then adding this value to
+                    the incremented PC.
+                    desReg is loaded with the information from memory located at this address.
+                    */
+                    reg[desReg] = mem_read(reg[R_PC] + PCoffset9);
+                    update_flags(desReg);
                 }
                 break;
+
             case OP_LDI:
                 {   
                     /*

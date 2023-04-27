@@ -81,6 +81,7 @@ uint16_t check_key()
     return WaitForSingleObject(hStdin, 1000) == WAIT_OBJECT_0 && _kbhit();
 }
 
+/* The following part should be kept the same */
 uint16_t swap16(uint16_t x) {
     /*
         The LC-3 is a little-endian architecture, but most modern computers are big-endian.

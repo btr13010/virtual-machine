@@ -4,6 +4,16 @@ Midterm Project ELEC2030
 
 **Description**: A simple LC-3 virtual machine written in C. The machine simulates how the CPU works inside a computer to execute an image program (compiled assembly program). The completed program is then tested with the provided 2048, hangman, and rogue game files.
 
+Modules Architecture:
+<p align="center">
+  <img src="./assets/Modules Architecture.png" alt="Size Limit CLI" width="738">
+</p>
+
+Flowchart:
+<p align="center">
+  <img src="./assets/Flowchart.png" alt="Size Limit CLI" width="738">
+</p>
+
 **How to run**:
 
 There are three functions in the utils.c file that are operating system dependent. You need to refer to this file and uncomment the functions corresponding to your OS before compiling the program.

@@ -313,53 +313,84 @@ int main(int argc, const char* argv[]) {
                 }
                 break;
             case OP_LDI:
-                {
-                    /* destination register (DR) */
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    /* PCoffset 9*/
-                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    /* add pc_offset to the current PC, look at that memory location to get the final address */
-                    reg[r0] = mem_read(mem_read(reg[R_PC] + pc_offset));
-                    update_flags(r0);
+                {   
+                    /*
+                        Load Indirect: load a value from address to a register. The address from which value is extracted can be 
+                        calculated by adding the sign-extended of the rightmost 9 bits to the incremented program counter (PC).
+                    */
+                    
+                    uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is specified by bits [9:11]
+                    uint16_t PCoffset9 = instr & 0b111111111;  // PCoffset9 is specified by the rightmost 9 bits.
+
+                    // add the sign-extended value of PCoffset9 to the current PC to calculate the address where the value will be taken, load it to the destination register 
+                    reg[DR] = mem_read(mem_read(reg[R_PC] + sign_extend(PCoffset9, 9)));
+                    update_flags(DR);
                 }
                 break;
             case OP_LDR:
                 {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t r1 = (instr >> 6) & 0x7;
-                    uint16_t offset = sign_extend(instr & 0x3F, 6);
-                    reg[r0] = mem_read(reg[r1] + offset);
-                    update_flags(r0);
+                    /*
+                        Load Base+offset: Assign value from an address to destination registar which is specified by bits [12:15].
+                        The address from which value is taken is calculated by the sum of sign-extended number which is specified
+                        by bits [0:5] and the content stored in a regiser which is specified by bits [6:8] 
+                    */
+
+                    uint16_t DR = (instr >> 9) & 0b111;  // destination register (DR) is define by bits [9: 11]. 
+                    uint16_t BaseR = (instr >> 6) & 0b111;  // BaseR is defined by bits [6:8]
+                    uint16_t Offset6 = instr & 0b111111;  //  Offset6 is defined by the rightmost 6 bits of the instruciton.
+
+                    reg[DR] = mem_read(reg[BaseR] + sign_extend(Offset6, 6));
+                    update_flags(DR);
                 }
                 break;
             case OP_LEA:
-                {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    reg[r0] = reg[R_PC] + pc_offset;
-                    update_flags(r0);
+                {   
+                    /*
+                        Load effective address: Load an address to a register. The address that will be loaded is equal to the sum of
+                        the incremented PC and the sign-extended number which is specified by bits [0:8] of the instruction.                
+                    */
+
+                    uint16_t DR = (instr >> 9) & 0b111;  // Destination register is the defined by bits [9:11]
+                    uint16_t PCoffset9 = instr & 0b111111111;  // PCoffset9 is defined by bits [0:8]
+
+                    reg[DR] = reg[R_PC] + sign_extend(PCoffset9, 9);
+                    update_flags(DR);
                 }
                 break;
             case OP_ST:
-                {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    mem_write(reg[R_PC] + pc_offset, reg[r0]); 
+                {   
+                    /*
+                        Store: store content of the register SR defined by bits [9:11] to a memory location.
+                        The location is the sum of the incremented PC and the sign-extended number that specified by the last 9 bits (PCoffset9) of the instruction.
+                    */
+
+                    uint16_t SR = (instr >> 9) & 0b111;  //SR is defined by bits [9:11]
+                    uint16_t PCoffset9 = instr & 0b111111111;  //PCoffset is specified by bits [0:8]
+
+                    mem_write(reg[R_PC] + sign_extend(PCoffset9, 9), reg[SR]); 
                 }
                 break;
             case OP_STI:
                 {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
-                    mem_write(mem_read(reg[R_PC] + pc_offset), reg[r0]);
+                    /*
+                        Store indirect: 
+                    */
+                    uint16_t SR = (instr >> 9) & 0b111;
+                    uint16_t PCoffset9 = instr & 0b111111111;
+
+                    mem_write(mem_read(reg[R_PC] + PCoffset9), reg[SR]);
                 }
                 break;
             case OP_STR:
                 {
-                    uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t r1 = (instr >> 6) & 0x7;
-                    uint16_t offset = sign_extend(instr & 0x3F, 6);
-                    mem_write(reg[r1] + offset, reg[r0]);
+                    /*
+                        Store register: 
+                    */
+                    uint16_t SR = (instr >> 9) & 0b111;
+                    uint16_t BaseR = (instr >> 6) & 0b111;
+                    uint16_t Offset6 = instr & 0b111111;
+                    
+                    mem_write(reg[BaseR] + sign_extend(Offset6, 6), reg[SR]);
                 }
                 break;
             case OP_TRAP:

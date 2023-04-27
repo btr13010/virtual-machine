@@ -217,7 +217,7 @@ int main(int argc, const char* argv[]) {
 
         // read the instruction from memory at the address of the PC register and increment the PC register
         uint16_t instr = mem_read(reg[R_PC]++); 
-        uint16_t op = instr >> 12; // the instruction is specified at the left-most 4 bits
+        uint16_t op = instr >> 12; // the opcode is specified at the left-most 4 bits of the instruction
 
         switch (op) {
             case OP_BR:
